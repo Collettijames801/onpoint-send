@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Send Form" />
+  <meta name="theme-color" content="#1f3a5f" />
+  <title>Send Form</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f3f5f8;
+      color: #1b2430;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      align-self: flex-start;
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    p.sub { margin: 0 0 20px; color: #5b6675; font-size: 15px; }
+    label { display: block; font-weight: 600; font-size: 14px; margin: 16px 0 6px; }
+    input {
+      width: 100%;
+      font-size: 18px;
+      padding: 14px;
+      border: 1px solid #cfd6df;
+      border-radius: 10px;
+      background: #fafbfc;
+    }
+    input:focus { outline: 2px solid #1f3a5f; border-color: transparent; }
+    button {
+      width: 100%;
+      margin-top: 24px;
+      font-size: 20px;
+      font-weight: 700;
+      padding: 18px;
+      border: 0;
+      border-radius: 12px;
+      background: #1f3a5f;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: default; }
+    .status { margin-top: 16px; font-size: 16px; min-height: 22px; text-align: center; }
+    .ok { color: #1a7f45; }
+    .err { color: #b42318; }
+    .history { margin-top: 24px; border-top: 1px solid #e6e9ee; padding-top: 12px; }
+    .history h2 { font-size: 14px; color: #5b6675; margin: 0 0 8px; font-weight: 600; }
+    .history ul { list-style: none; padding: 0; margin: 0; font-size: 14px; }
+    .history li { padding: 6px 0; border-bottom: 1px solid #f0f2f5; display: flex; justify-content: space-between; }
+    .history li span:last-child { color: #8a94a3; }
+    .passrow { display: none; }
+    .link { background: none; color: #5b6675; font-size: 13px; padding: 8px; margin-top: 8px; font-weight: 400; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Send Client Form</h1>
+    <p class="sub">Enter the client's info and tap send.</p>
+
+    <form id="f" autocomplete="off">
+      <label for="name">Client first name</label>
+      <input id="name" name="name" type="text" placeholder="e.g. Sarah" autocapitalize="words" />
+
+      <label for="phone">Client mobile number</label>
+      <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="(555) 555-1234" required />
+
+      <div class="passrow" id="passrow">
+        <label for="passcode">Passcode</label>
+        <input id="passcode" type="password" placeholder="Only needed once" />
+      </div>
+
+      <button type="submit" id="btn">Send Form Text</button>
+    </form>
+
+    <div class="status" id="status"></div>
+
+    <div class="history" id="historyBox" hidden>
+      <h2>Sent from this phone</h2>
+      <ul id="history"></ul>
+    </div>
+
+    <button class="link" id="forget" type="button" hidden>Change passcode</button>
+  </main>
+
+  <script>
+    const store = {
+      get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+      del(k) { try { localStorage.removeItem(k); } catch {} },
+    };
+
+    const form = document.getElementById("f");
+    const btn = document.getElementById("btn");
+    const statusEl = document.getElementById("status");
+    const passrow = document.getElementById("passrow");
+    const passInput = document.getElementById("passcode");
+    const forgetBtn = document.getElementById("forget");
+
+    function refreshPass() {
+      const saved = store.get("sf_pass");
+      passrow.style.display = saved ? "none" : "block";
+      forgetBtn.hidden = !saved;
+    }
+
+    function renderHistory() {
+      let items = [];
+      try { items = JSON.parse(store.get("sf_history") || "[]"); } catch {}
+      const box = document.getElementById("historyBox");
+      const ul = document.getElementById("history");
+      ul.innerHTML = "";
+      if (!items.length) { box.hidden = true; return; }
+      box.hidden = false;
+      items.slice(0, 10).forEach(i => {
+        const li = document.createElement("li");
+        const a = document.createElement("span");
+        a.textContent = (i.name ? i.name + " · " : "") + i.phone;
+        const b = document.createElement("span");
+        b.textContent = new Date(i.at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        li.append(a, b);
+        ul.append(li);
+      });
+    }
+
+    function addHistory(name, phone) {
+      let items = [];
+      try { items = JSON.parse(store.get("sf_history") || "[]"); } catch {}
+      items.unshift({ name, phone, at: Date.now() });
+      store.set("sf_history", JSON.stringify(items.slice(0, 50)));
+      renderHistory();
+    }
+
+    forgetBtn.addEventListener("click", () => { store.del("sf_pass"); refreshPass(); });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const passcode = store.get("sf_pass") || passInput.value.trim();
+
+      if (!passcode) { statusEl.className = "status err"; statusEl.textContent = "Enter the passcode."; return; }
+
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+      statusEl.className = "status";
+      statusEl.textContent = "";
+
+      try {
+        const r = await fetch("/api/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, phone, passcode }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok && data.ok) {
+          store.set("sf_pass", passcode);
+          refreshPass();
+          addHistory(name, phone);
+          statusEl.className = "status ok";
+          statusEl.textContent = "✓ Form sent" + (name ? " to " + name : "") + "!";
+          form.reset();
+        } else {
+          if (r.status === 401) { store.del("sf_pass"); refreshPass(); }
+          statusEl.className = "status err";
+          statusEl.textContent = data.error || "Something went wrong. Try again.";
+        }
+      } catch {
+        statusEl.className = "status err";
+        statusEl.textContent = "No connection. Check your signal and try again.";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Send Form Text";
+      }
+    });
+
+    refreshPass();
+    renderHistory();
+  </script>
+</body>
+</html>
