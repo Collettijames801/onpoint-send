@@ -1,15 +1,21 @@
-// Called by the ElevenLabs voice agent after a missed call.
-// Texts the caller the intake form, and (optionally) texts Mario who called.
+// Called by the ElevenLabs voice agent at the end of every missed call.
+// - Texts Mario who called and their message.
+// - Texts the caller the intake form, only if they're a potential client who agreed.
 //
 // URL to put in the ElevenLabs webhook tool:
 //   https://onpoint-send.vercel.app/api/missed-call?key=YOUR_APP_PASSCODE
 //
 // Body (JSON) sent by the agent:
-//   { "first_name": "Sarah", "phone": "+17325550148" }
+//   {
+//     "first_name": "Sarah",
+//     "phone": "+17325550148",
+//     "message": "Calling about an inspection next week",
+//     "send_form": true
+//   }
 //
 // Uses the same environment variables as /api/send, plus optional:
 //   MISSED_CALL_TEMPLATE - custom wording. Placeholders: {name}, {business}, {link}
-//   NOTIFY_NUMBER        - Mario's cell. If set, he gets a text with the caller's name and number.
+//   NOTIFY_NUMBER        - Mario's cell. He gets a text with the caller's name, number and message.
 
 const DEFAULT_TEMPLATE =
   "Hi {name}, thanks for calling {business}! Mario is on a job and will call you back shortly. " +
@@ -21,6 +27,16 @@ function toE164(raw) {
   if (digits.length === 10) return "+1" + digits;
   if (digits.length === 11 && digits.startsWith("1")) return "+" + digits;
   return null;
+}
+
+function prettyPhone(e164) {
+  return e164 ? e164.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "unknown number";
+}
+
+function toBool(value, fallback) {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value === "boolean") return value;
+  return /^(true|yes|y|1)$/i.test(String(value).trim());
 }
 
 async function sendSms({ sid, token, from, to, body }) {
@@ -67,56 +83,62 @@ module.exports = async (req, res) => {
     try { body = JSON.parse(body); } catch { body = {}; }
   }
 
-  const rawName = body.first_name || body.name || "";
-  const firstName = String(rawName).trim().split(/\s+/)[0] || "there";
-  const to = toE164(body.phone || body.phone_number);
+  const twilio = { sid: TWILIO_ACCOUNT_SID, token: TWILIO_AUTH_TOKEN, from: TWILIO_FROM_NUMBER };
 
-  if (!to) {
+  const rawName = String(body.first_name || body.name || "").trim();
+  const firstName = rawName.split(/\s+/)[0] || "";
+  const callerPhone = toE164(body.phone || body.phone_number);
+  const callerMessage = String(body.message || "").trim().slice(0, 300);
+  const sendForm = toBool(body.send_form, true);
+
+  // 1) Text the caller the form (only potential clients who said yes).
+  let formSent = false;
+  let formError = null;
+
+  if (sendForm) {
+    if (!callerPhone) {
+      formError = "bad_number";
+    } else {
+      const formText = (MISSED_CALL_TEMPLATE || DEFAULT_TEMPLATE)
+        .replace(/\{name\}/g, firstName || "there")
+        .replace(/\{business\}/g, BUSINESS_NAME || "us")
+        .replace(/\{link\}/g, FORM_LINK);
+      try {
+        const result = await sendSms({ ...twilio, to: callerPhone, body: formText });
+        formSent = result.ok;
+        if (!result.ok) formError = "send_failed";
+      } catch {
+        formError = "send_failed";
+      }
+    }
+  }
+
+  // 2) Text Mario who called and why.
+  const notifyTo = toE164(NOTIFY_NUMBER);
+  if (notifyTo) {
+    const who = `${firstName || "Caller"} ${prettyPhone(callerPhone)}`;
+    const lines = [`Missed call: ${who}`];
+    if (callerMessage) lines.push(`Message: "${callerMessage}"`);
+    if (formSent) lines.push("Form text sent.");
+    const notifyText = lines.join("\n");
+    await sendSms({ ...twilio, to: notifyTo, body: notifyText }).catch(() => {});
+  }
+
+  if (formError === "bad_number") {
     return res.status(200).json({
       ok: false,
-      message: "That phone number didn't look right, so no text was sent. Ask the caller to repeat their 10-digit number.",
+      message: "That phone number didn't look right, so no form text was sent. Ask the caller to repeat their 10-digit number.",
+    });
+  }
+  if (formError) {
+    return res.status(200).json({
+      ok: false,
+      message: "The form text couldn't be sent, but Mario got their message. Let the caller know Mario will call them back.",
     });
   }
 
-  const message = (MISSED_CALL_TEMPLATE || DEFAULT_TEMPLATE)
-    .replace(/\{name\}/g, firstName)
-    .replace(/\{business\}/g, BUSINESS_NAME || "us")
-    .replace(/\{link\}/g, FORM_LINK);
-
-  try {
-    const result = await sendSms({
-      sid: TWILIO_ACCOUNT_SID,
-      token: TWILIO_AUTH_TOKEN,
-      from: TWILIO_FROM_NUMBER,
-      to,
-      body: message,
-    });
-
-    if (!result.ok) {
-      return res.status(200).json({
-        ok: false,
-        message: "The text couldn't be sent. Let the caller know Mario will call them back.",
-        error: result.data && result.data.message,
-      });
-    }
-
-    const notifyTo = toE164(NOTIFY_NUMBER);
-    if (notifyTo) {
-      const pretty = to.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
-      await sendSms({
-        sid: TWILIO_ACCOUNT_SID,
-        token: TWILIO_AUTH_TOKEN,
-        from: TWILIO_FROM_NUMBER,
-        to: notifyTo,
-        body: `Missed call: ${firstName === "there" ? "Caller" : firstName} ${pretty}. Form text sent. Call them back when you can.`,
-      }).catch(() => {});
-    }
-
-    return res.status(200).json({ ok: true, message: `Form text sent to ${firstName}.` });
-  } catch (err) {
-    return res.status(200).json({
-      ok: false,
-      message: "The text couldn't be sent. Let the caller know Mario will call them back.",
-    });
-  }
+  return res.status(200).json({
+    ok: true,
+    message: formSent ? `Form text sent to ${firstName || "the caller"}, and Mario was notified.` : "Mario was notified.",
+  });
 };
