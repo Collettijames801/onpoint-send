@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Inspection Request Form | On Point Home Inspection Services</title>
+  <meta name="theme-color" content="#1b1b1b" />
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --red: #d7262c;
+      --blue: #1d5fa8;
+      --ink: #1b2430;
+      --muted: #5b6675;
+      --line: #d5dbe3;
+      --field: #f6f8fb;
+      --bg: #f1f3f6;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+      -webkit-text-size-adjust: 100%;
+    }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 20px 14px 48px; }
+    header { text-align: center; padding: 18px 16px 18px; background: #fff; border-radius: 14px; border: 1px solid #e3e7ec; margin-bottom: 16px; }
+    header img { width: 100%; max-width: 360px; height: auto; display: block; margin: 0 auto 10px; }
+    header .phone { font-weight: 700; font-size: 17px; margin: 0; }
+    header .phone a { color: var(--ink); text-decoration: none; }
+    header h1 { color: var(--red); font-size: 20px; margin: 4px 0 0; font-weight: 700; }
+    header p.lead { color: var(--muted); font-size: 15px; margin: 8px 0 0; }
+
+    .card { background: #fff; border-radius: 14px; margin-bottom: 16px; overflow: hidden; border: 1px solid #e3e7ec; }
+    .card h2 {
+      margin: 0; background: #1b1b1b; color: #fff; font-size: 14px; letter-spacing: 0.04em;
+      text-transform: uppercase; padding: 11px 16px; font-weight: 700;
+    }
+    .card .body { padding: 16px; }
+
+    label.field { display: block; margin-bottom: 14px; }
+    label.field:last-child { margin-bottom: 0; }
+    label.field span { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    label.field span em { font-style: normal; color: var(--red); }
+    label.field span small { font-weight: 400; color: var(--muted); }
+    input[type="text"], input[type="tel"], input[type="email"], textarea {
+      width: 100%; font-size: 17px; padding: 13px 12px; border: 1px solid var(--line);
+      border-radius: 10px; background: var(--field); color: var(--ink); font-family: inherit;
+      -webkit-appearance: none; appearance: none;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    input:focus, textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(29,95,168,0.15); background: #fff; }
+    .row { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    @media (min-width: 520px) {
+      .row.city-state-zip { grid-template-columns: 1.6fr 0.7fr 1fr; }
+      .row.two { grid-template-columns: 1fr 1fr; }
+    }
+    .row label.field { margin-bottom: 0; }
+    .group { margin-bottom: 14px; }
+    .group:last-child { margin-bottom: 0; }
+
+    .choices { display: grid; gap: 10px; grid-template-columns: 1fr; }
+    @media (min-width: 520px) { .choices.three { grid-template-columns: repeat(3, 1fr); } .choices.two-col { grid-template-columns: 1fr 1fr; } }
+    .choice { position: relative; }
+    .choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .choice label {
+      display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line);
+      border-radius: 10px; background: var(--field); font-size: 16px; font-weight: 600; cursor: pointer; min-height: 52px;
+    }
+    .choice label::before {
+      content: ""; flex: 0 0 22px; height: 22px; border: 2px solid #9aa5b3; border-radius: 6px; background: #fff;
+    }
+    .choice input[type="radio"] + label::before { border-radius: 50%; }
+    .choice input:checked + label { border-color: var(--blue); background: #eaf2fb; color: var(--blue); }
+    .choice input:checked + label::before {
+      border-color: var(--blue); background: var(--blue);
+      box-shadow: inset 0 0 0 4px #fff;
+    }
+    .choice input:focus-visible + label { box-shadow: 0 0 0 3px rgba(29,95,168,0.25); }
+
+    .hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+    .error { display: none; color: var(--red); font-size: 14px; font-weight: 600; margin: 6px 0 0; }
+    .invalid input, .invalid .choices label { border-color: var(--red); }
+    .invalid .error { display: block; }
+
+    button.submit {
+      width: 100%; border: 0; border-radius: 12px; background: var(--red); color: #fff;
+      font-size: 19px; font-weight: 700; padding: 17px; cursor: pointer; font-family: inherit;
+    }
+    button.submit:disabled { opacity: 0.6; cursor: default; }
+    .status { text-align: center; font-size: 15px; margin-top: 12px; min-height: 22px; }
+    .status.err { color: var(--red); font-weight: 600; }
+
+    .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+    .done { display: none; background: #fff; border-radius: 14px; padding: 32px 20px; text-align: center; border: 1px solid #e3e7ec; }
+    .done .check {
+      width: 64px; height: 64px; border-radius: 50%; background: #e7f6ee; color: #1a7f45; font-size: 34px;
+      line-height: 64px; margin: 0 auto 14px; font-weight: 700;
+    }
+    .done h2 { margin: 0 0 8px; font-size: 22px; }
+    .done p { margin: 0; color: var(--muted); font-size: 16px; }
+
+    footer { text-align: center; font-size: 14px; color: var(--muted); margin-top: 22px; }
+    footer a { color: var(--blue); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <img src="/logo.png" alt="On Point Home Inspection Services" width="800" height="202" />
+      <p class="phone"><a href="tel:+17326063761">732-606-3761</a></p>
+      <h1>Inspection Request Form</h1>
+      <p class="lead">Takes about 2 minutes. Tap Submit when you're done and it goes straight to Mario.</p>
+    </header>
+
+    <form id="f" novalidate>
+      <div class="hp" aria-hidden="true">
+        <label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <section class="card">
+        <h2>Send report to</h2>
+        <div class="body">
+          <div class="group" id="g-report">
+            <div class="choices three">
+              <div class="choice"><input type="radio" id="rt-client" name="report_to" value="Client" /><label for="rt-client">Client</label></div>
+              <div class="choice"><input type="radio" id="rt-realtor" name="report_to" value="Realtor" /><label for="rt-realtor">Realtor</label></div>
+              <div class="choice"><input type="radio" id="rt-both" name="report_to" value="Both" /><label for="rt-both">Both</label></div>
+            </div>
+            <p class="error">Choose who should get the report.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Client / buyer information</h2>
+        <div class="body">
+          <label class="field" id="g-name">
+            <span>Client / Buyer Name <em>*</em></span>
+            <input type="text" name="client_name" autocomplete="name" autocapitalize="words" />
+            <p class="error">Enter your name.</p>
+          </label>
+          <div class="row two group">
+            <label class="field" id="g-phone">
+              <span>Phone <em>*</em></span>
+              <input type="tel" name="client_phone" autocomplete="tel" inputmode="tel" />
+              <p class="error">Enter a 10-digit phone number.</p>
+            </label>
+            <label class="field" id="g-email">
+              <span>Email</span>
+              <input type="email" name="client_email" autocomplete="email" inputmode="email" autocapitalize="off" />
+              <p class="error">Check your email address.</p>
+            </label>
+          </div>
+          <label class="field">
+            <span>Client Home Street Address</span>
+            <input type="text" name="client_street" autocomplete="street-address" />
+          </label>
+          <div class="row city-state-zip">
+            <label class="field"><span>City</span><input type="text" name="client_city" autocomplete="address-level2" /></label>
+            <label class="field"><span>State</span><input type="text" name="client_state" autocomplete="address-level1" maxlength="20" /></label>
+            <label class="field"><span>Zip</span><input type="text" name="client_zip" autocomplete="postal-code" inputmode="numeric" maxlength="10" /></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Property details</h2>
+        <div class="body">
+          <p class="hint">The address of the home being inspected.</p>
+          <label class="field">
+            <span>Property Street Address</span>
+            <input type="text" name="prop_street" />
+          </label>
+          <div class="row city-state-zip">
+            <label class="field"><span>City</span><input type="text" name="prop_city" /></label>
+            <label class="field"><span>State</span><input type="text" name="prop_state" maxlength="20" /></label>
+            <label class="field"><span>Zip</span><input type="text" name="prop_zip" inputmode="numeric" maxlength="10" /></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Realtor information</h2>
+        <div class="body">
+          <label class="field">
+            <span>Realtor Name</span>
+            <input type="text" name="realtor_name" autocapitalize="words" />
+          </label>
+          <div class="row two">
+            <label class="field"><span>Realtor Phone</span><input type="tel" name="realtor_phone" inputmode="tel" /></label>
+            <label class="field"><span>Realtor Email</span><input type="email" name="realtor_email" inputmode="email" autocapitalize="off" /></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Services requested</h2>
+        <div class="body">
+          <p class="hint">Check all that apply.</p>
+          <div class="choices two-col">
+            <div class="choice"><input type="checkbox" id="svc-home" name="services" value="Home Inspection" /><label for="svc-home">Home Inspection</label></div>
+            <div class="choice"><input type="checkbox" id="svc-radon" name="services" value="Radon Testing" /><label for="svc-radon">Radon Testing</label></div>
+            <div class="choice"><input type="checkbox" id="svc-termite" name="services" value="Termite / WDI" /><label for="svc-termite">Termite / WDI</label></div>
+            <div class="choice"><input type="checkbox" id="svc-mold" name="services" value="Mold Testing" /><label for="svc-mold">Mold Testing</label></div>
+            <div class="choice"><input type="checkbox" id="svc-tank" name="services" value="Oil Tank Sweep" /><label for="svc-tank">Oil Tank Sweep</label></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Special requests / notes</h2>
+        <div class="body">
+          <label class="field">
+            <span>Anything Mario should know? <small>(optional)</small></span>
+            <textarea name="notes" maxlength="800"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <button type="submit" class="submit" id="btn">Submit</button>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </form>
+
+    <div class="done" id="done">
+      <div class="check" aria-hidden="true">&#10003;</div>
+      <h2>Thank you!</h2>
+      <p>Your request was sent to Mario. He'll be in touch soon. Questions? Call <a href="tel:+17326063761">732-606-3761</a>.</p>
+    </div>
+
+    <footer>
+      <a href="https://onpointhomeinspection.com">onpointhomeinspection.com</a> ·
+      <a href="mailto:mario@onpointhomeinspection.com">mario@onpointhomeinspection.com</a><br />
+      <a href="/privacy">Privacy Policy</a>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById("f");
+      var btn = document.getElementById("btn");
+      var statusEl = document.getElementById("status");
+
+      function digits(v) { return String(v || "").replace(/\D/g, ""); }
+      function setInvalid(id, bad) {
+        var el = document.getElementById(id);
+        if (el) el.classList.toggle("invalid", !!bad);
+        return !bad;
+      }
+
+      form.addEventListener("input", function (e) {
+        var g = e.target.closest(".invalid");
+        if (g) g.classList.remove("invalid");
+      });
+      form.addEventListener("change", function (e) {
+        var g = e.target.closest(".invalid");
+        if (g) g.classList.remove("invalid");
+      });
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        statusEl.className = "status";
+        statusEl.textContent = "";
+
+        var fd = new FormData(form);
+        var data = {};
+        fd.forEach(function (v, k) {
+          if (k === "services") return;
+          data[k] = String(v).trim();
+        });
+        data.services = fd.getAll("services");
+
+        var ok = true;
+        ok = setInvalid("g-report", !data.report_to) && ok;
+        ok = setInvalid("g-name", !data.client_name) && ok;
+        var p = digits(data.client_phone);
+        ok = setInvalid("g-phone", !(p.length === 10 || (p.length === 11 && p.charAt(0) === "1"))) && ok;
+        ok = setInvalid("g-email", data.client_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.client_email)) && ok;
+
+        if (!ok) {
+          statusEl.className = "status err";
+          statusEl.textContent = "Please fix the items marked in red.";
+          var first = form.querySelector(".invalid");
+          if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "Sending…";
+
+        fetch("/api/submit-form", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        })
+          .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { r: r, j: j }; }); })
+          .then(function (res) {
+            if (res.r.ok && res.j.ok) {
+              form.style.display = "none";
+              document.getElementById("done").style.display = "block";
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            } else {
+              statusEl.className = "status err";
+              statusEl.textContent = res.j.error || "Something went wrong. Please try again, or call 732-606-3761.";
+            }
+          })
+          .catch(function () {
+            statusEl.className = "status err";
+            statusEl.textContent = "No connection. Check your signal and try again.";
+          })
+          .then(function () {
+            btn.disabled = false;
+            btn.textContent = "Submit";
+          });
+      });
+    })();
+  </script>
+</body>
+</html>
